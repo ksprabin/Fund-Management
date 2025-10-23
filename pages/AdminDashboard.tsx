@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import * as XLSX from 'xlsx';
 import { useData } from '../context/DataContext';
 import { User, Role, Transaction } from '../types';
 import Layout from '../components/Layout';
@@ -6,7 +7,7 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import Input from '../components/Input';
-import { UserPlusIcon, CurrencyRupeeIcon, UsersIcon, PencilIcon, TrashIcon } from '../components/icons';
+import { UserPlusIcon, CurrencyRupeeIcon, UsersIcon, PencilIcon, TrashIcon, DocumentArrowDownIcon } from '../components/icons';
 
 const AddUserForm: React.FC<{onClose: () => void}> = ({onClose}) => {
     const [name, setName] = useState('');
@@ -202,6 +203,7 @@ const AdminDashboard: React.FC = () => {
     const [filterType, setFilterType] = useState('all');
     const [filterDescription, setFilterDescription] = useState('');
     const [userSearchQuery, setUserSearchQuery] = useState('');
+    const [isExporting, setIsExporting] = useState(false);
 
     const normalUsers = useMemo(() => users.filter(u => 
         u.role === Role.USER && 
@@ -290,6 +292,41 @@ const AdminDashboard: React.FC = () => {
         setFilterDescription('');
     };
 
+    const handleExport = () => {
+        if (isExporting) return;
+        setIsExporting(true);
+
+        try {
+            // Sort by date ascending for a chronological backup
+            const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+            const dataToExport = sortedTransactions.map(txn => {
+                const user = users.find(u => u.id === txn.userId);
+                return {
+                    'Transaction ID': txn.id,
+                    'User Name': user?.name || 'N/A',
+                    'Username': user ? `@${user.username}` : 'Unknown',
+                    'Date': new Date(txn.date).toLocaleString(),
+                    'Description': txn.description,
+                    'Amount (₹)': txn.amount,
+                    'Type': txn.amount >= 0 ? 'Credit' : 'Debit'
+                };
+            });
+            
+            const ws = XLSX.utils.json_to_sheet(dataToExport);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
+            
+            const today = new Date().toISOString().slice(0, 10);
+            XLSX.writeFile(wb, `transactions-backup-${today}.xlsx`);
+        } catch (error) {
+            console.error("Failed to export Excel file:", error);
+            alert("An error occurred while exporting the data.");
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     return (
         <Layout title="Admin Dashboard">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
@@ -331,7 +368,20 @@ const AdminDashboard: React.FC = () => {
                     </div>
                 </Card>
 
-                <Card title="All Transactions">
+                <Card 
+                    title="All Transactions"
+                    actions={
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={handleExport}
+                            disabled={isExporting}
+                        >
+                            <DocumentArrowDownIcon className="w-5 h-5 mr-2" />
+                            {isExporting ? 'Exporting...' : 'Export Excel'}
+                        </Button>
+                    }
+                >
                     <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg mb-4">
                         <h4 className="text-md font-semibold mb-3 text-gray-700 dark:text-gray-200">Filter Transactions</h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
