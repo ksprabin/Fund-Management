@@ -1,0 +1,5 @@
+{
+  "name": "Copy of Transaction Management System",
+  "description": "An application for administrators to manage users and their financial transactions, and for users to log in and view their own transaction history. Features separate login portals for admins and users.",
+  "requestFramePermissions": []
+}
