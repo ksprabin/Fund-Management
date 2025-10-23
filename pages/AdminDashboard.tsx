@@ -183,7 +183,7 @@ const EditTransactionForm: React.FC<{transaction: Transaction, onClose: () => vo
 
 
 const AdminDashboard: React.FC = () => {
-    const { users, transactions, deleteTransaction } = useData();
+    const { users, transactions, deleteTransaction, deleteUser } = useData();
     const [isUserModalOpen, setUserModalOpen] = useState(false);
     const [isTxnModalOpen, setTxnModalOpen] = useState(false);
     const [selectedUserForTxn, setSelectedUserForTxn] = useState<User | null>(null);
@@ -196,6 +196,9 @@ const AdminDashboard: React.FC = () => {
     
     const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
     const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+    
+    const [deletingUser, setDeletingUser] = useState<User | null>(null);
+    const [isDeleteUserModalOpen, setDeleteUserModalOpen] = useState(false);
 
     const [filterUser, setFilterUser] = useState('all');
     const [filterStartDate, setFilterStartDate] = useState('');
@@ -284,6 +287,23 @@ const AdminDashboard: React.FC = () => {
         }
     };
     
+    const openDeleteUserModal = (user: User) => {
+        setDeletingUser(user);
+        setDeleteUserModalOpen(true);
+    };
+
+    const closeDeleteUserModal = () => {
+        setDeletingUser(null);
+        setDeleteUserModalOpen(false);
+    };
+
+    const handleDeleteUserConfirm = async () => {
+        if (deletingUser) {
+            await deleteUser(deletingUser.id);
+            closeDeleteUserModal();
+        }
+    };
+
     const clearFilters = () => {
         setFilterUser('all');
         setFilterStartDate('');
@@ -361,6 +381,9 @@ const AdminDashboard: React.FC = () => {
                                     </Button>
                                     <Button size="sm" variant="secondary" onClick={() => openEditUserModal(user)} aria-label={`Edit user ${user.username}`}>
                                         <PencilIcon className="w-4 h-4" />
+                                    </Button>
+                                    <Button size="sm" variant="danger" onClick={() => openDeleteUserModal(user)} aria-label={`Delete user ${user.username}`}>
+                                        <TrashIcon className="w-4 h-4" />
                                     </Button>
                                 </div>
                             </div>
@@ -490,6 +513,23 @@ const AdminDashboard: React.FC = () => {
                         <div className="flex justify-end space-x-2 pt-4">
                             <Button type="button" variant="secondary" onClick={closeDeleteModal}>Cancel</Button>
                             <Button type="button" variant="danger" onClick={handleDeleteConfirm}>Delete</Button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
+            {deletingUser && (
+                <Modal isOpen={isDeleteUserModalOpen} onClose={closeDeleteUserModal} title="Confirm User Deletion">
+                    <div>
+                        <p className="text-gray-600 dark:text-gray-400 mb-4">
+                            Are you sure you want to delete user <span className="font-semibold">@{deletingUser.username}</span>?
+                        </p>
+                        <div className="bg-red-50 dark:bg-red-900/40 p-3 rounded-md mb-4 text-sm border-l-4 border-red-500 text-red-800 dark:text-red-300">
+                            <p className="font-bold">This will permanently delete the user and all of their associated transactions. This action cannot be undone.</p>
+                        </div>
+                        <div className="flex justify-end space-x-2 pt-4">
+                            <Button type="button" variant="secondary" onClick={closeDeleteUserModal}>Cancel</Button>
+                            <Button type="button" variant="danger" onClick={handleDeleteUserConfirm}>Delete User</Button>
                         </div>
                     </div>
                 </Modal>

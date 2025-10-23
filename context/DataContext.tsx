@@ -8,6 +8,7 @@ interface DataContextType {
     transactions: Transaction[];
     addUser: (user: Omit<User, 'id' | 'role'>) => Promise<void>;
     updateUser: (id: string, changes: Partial<User>) => Promise<void>;
+    deleteUser: (userId: string) => Promise<void>;
     addTransaction: (transaction: Omit<Transaction, 'id' | 'date'>) => Promise<void>;
     updateTransaction: (id: string, changes: Partial<Transaction>) => Promise<void>;
     deleteTransaction: (transactionId: string) => Promise<void>;
@@ -51,12 +52,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         await db.users.update(id, changes);
     };
 
+    const deleteUser = async (userId: string) => {
+        await db.transaction('rw', db.users, db.transactions, async () => {
+            // Also delete all transactions associated with the user
+            await db.transactions.where({ userId }).delete();
+            await db.users.delete(userId);
+        });
+    };
+
     const addTransaction = async (transaction: Omit<Transaction, 'id' | 'date'>) => {
         const newTransaction: Transaction = {
             ...transaction,
             id: `txn-${Date.now()}`,
             date: new Date().toISOString(),
         };
+        // FIX: Corrected a typo from `db.transaction` to `db.transactions` to correctly reference the database table.
         await db.transactions.add(newTransaction);
     };
 
@@ -73,7 +83,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             users: users || [], 
             transactions: transactions || [], 
             addUser, 
-            updateUser, 
+            updateUser,
+            deleteUser, 
             addTransaction, 
             updateTransaction, 
             deleteTransaction 
